@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Metawear Control 2</string>
+    <string name="welcome_text">Welcome to the Metawear Control app version 2!
+    there are some great improvements in appereance and functionality over the first iteration</string>
+
+    <string name="scanning">Scanning for available devices around...</string>
+</resources>

@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Metawear Control</string>
+    <string name="intro_text">Welcome to the Metawear Control app! please connect to the board to begin</string>
+    <string name="connected_text">Your Metawear board is connected! Waiting to connect with the Arduino...</string>
+</resources>

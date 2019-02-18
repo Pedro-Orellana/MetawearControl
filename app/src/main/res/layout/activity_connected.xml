@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ConnectedActivity"
+    android:orientation="vertical">
+    <TextView
+        android:id="@+id/connected_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="100dp"
+        android:text="@string/connected_text"
+        android:textSize="16dp"
+        android:gravity="center"/>
+    <Button
+        android:id="@+id/scan_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Scan"
+        android:layout_gravity="center"
+        android:onClick="onClickScan"/>
+
+    <Button
+        android:id="@+id/connected_button1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="connect to Arduino"
+        android:layout_gravity="center"
+        android:onClick="onClickConnectToArduino"
+        android:layout_marginTop="50dp"/>
+
+    <TextView
+        android:id="@+id/pressed_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+</LinearLayout>

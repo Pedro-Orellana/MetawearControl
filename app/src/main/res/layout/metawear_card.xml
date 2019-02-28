@@ -98,7 +98,23 @@
             
             <ImageView
                 android:layout_width="match_parent"
-                android:layout_height="80dp" />
+                android:layout_height="90dp"
+                android:src="@drawable/metawear1"/>
+
+            <TextView
+                android:layout_gravity="center"
+                android:textAlignment="center"
+                android:id="@+id/text_view_device_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="This is where name goes"/>
+
+            <android.support.design.button.MaterialButton
+                android:id="@+id/button_connect_ring"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="Connect"/>
 
         </LinearLayout>
 

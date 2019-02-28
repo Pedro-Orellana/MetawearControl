@@ -4,4 +4,6 @@
     there are some great improvements in appereance and functionality over the first iteration</string>
 
     <string name="scanning">Scanning for available devices around...</string>
+
+    <string name="connecting">Connecting...</string>
 </resources>

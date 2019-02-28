@@ -7,91 +7,119 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.AsyncTask;
+import android.os.IBinder;
+import android.support.design.button.MaterialButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import com.mbientlab.metawear.MetaWearBoard;
+import com.mbientlab.metawear.android.BtleService;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ServiceConnection {
 
-    private BluetoothManager manager;
-    private BluetoothLeScanner scanner;
-    private final String METAWEAR_MAC_ADDRESS = "CB:42:F6:6E:2C:7A";
+    static final String METAWEAR_MAC_ADDRESS = "CB:42:F6:6E:2C:7A";
     private BluetoothDevice foundMetawearDevice;
-    private MetaWearScanCallback callback;
     private ProgressBar progressBar;
     private RecyclerView recyclerView;
+    static BtleService.LocalBinder myLocalBinder;
+    private TextView scanningTextView;
 
+
+//This has the onClick for the recyclerView.
+    interface onClickImplementation{
+        void myOnClick();
+
+    }
+
+    private onClickImplementation MainActivityClickImplementation = new onClickImplementation() {
+        @Override
+        public void myOnClick() {
+            Intent intent = new Intent(MainActivity.this,ConnectedActivity.class);
+            intent.putExtra("BluetoothDevice",foundMetawearDevice);
+            startActivity(intent);
+
+
+        }
+    };
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+       //Finding the toolbar and showing it on screen
         Toolbar toolbar = findViewById(R.id.toolbar_main_activity);
         setSupportActionBar(toolbar);
-        manager = (BluetoothManager) this.getSystemService(BLUETOOTH_SERVICE);
+
+        //getting the Bluetooth manager to do the scan
+        BluetoothManager bluetoothManager = (BluetoothManager) this.getSystemService(BLUETOOTH_SERVICE);
+
+       //getting a reference of the views
         progressBar = findViewById(R.id.scanning_progress_bar);
+        progressBar.setVisibility(View.VISIBLE);
         recyclerView = findViewById(R.id.recycler_scan_results);
-    }
+        scanningTextView = findViewById(R.id.scanning_text_view);
 
-    public class ConnectToMetawearAsyncTask extends AsyncTask<BluetoothManager, Void, Void> {
-        @Override
-        protected Void doInBackground(BluetoothManager... bluetoothManagers) {
-            startBluetoothScan(bluetoothManagers[0]);
-            return null;
-        }
+        //getting the service and binding it to the activity
+        bindService(new Intent(this, BtleService.class),this, Context.BIND_AUTO_CREATE);
 
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            recyclerView.setVisibility(View.INVISIBLE);
-            progressBar.setVisibility(View.VISIBLE);
-
-
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            super.onPostExecute(aVoid);
-
-            if(foundMetawearDevice != null){
-
-
-            }
+       //start scanning for the ring
+        if(bluetoothManager != null) {
+            startBluetoothScan(bluetoothManager);
 
         }
     }
 
+
+    @Override
+    public void onServiceConnected(ComponentName name, IBinder service) {
+        myLocalBinder = (BtleService.LocalBinder) service;
+
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName name) {
+
+    }
 
 
 
 
 
     private void startBluetoothScan(BluetoothManager manager){
-        scanner = manager.getAdapter().getBluetoothLeScanner();
-        List<ScanFilter> filters = new ArrayList<>() ;
-        ScanFilter filter =  new ScanFilter.Builder()
-                .setDeviceAddress(METAWEAR_MAC_ADDRESS)
-                .build();
-        filters.add(filter);
+        BluetoothLeScanner scanner = manager.getAdapter().getBluetoothLeScanner();
+        if(scanner == null){
+            scanningTextView.setText("the scanner is null");
+        }else {
+            List<ScanFilter> filters = new ArrayList<>();
+            ScanFilter filter = new ScanFilter.Builder()
+                    .setDeviceAddress(METAWEAR_MAC_ADDRESS)
+                    .build();
+            filters.add(filter);
 
-        ScanSettings settings = new ScanSettings.Builder().build();
+            ScanSettings settings = new ScanSettings.Builder().build();
 
-        callback = new MetaWearScanCallback();
+           MetaWearScanCallback callback = new MetaWearScanCallback();
 
-        scanner.startScan(filters,settings,callback);
+            scanner.startScan(filters, settings, callback);
 
 
-
+        }
 
     }
 
@@ -101,12 +129,28 @@ public class MainActivity extends AppCompatActivity {
         public void onScanResult(int callbackType, ScanResult result) {
             super.onScanResult(callbackType, result);
             foundMetawearDevice = result.getDevice();
-            scanner.stopScan(callback);
+            if(foundMetawearDevice != null) {
+                String deviceName = foundMetawearDevice.getName();
+                String deviceAdress = foundMetawearDevice.getAddress();
+                int deviceType = foundMetawearDevice.getType();
+
+                RecyclerViewAdapter recyclerViewAdapter = new RecyclerViewAdapter(deviceName, deviceAdress, deviceType, MainActivityClickImplementation);
+                LinearLayoutManager linearLayoutManager = new LinearLayoutManager(MainActivity.this);
+                recyclerView.setLayoutManager(linearLayoutManager);
+                recyclerView.setAdapter(recyclerViewAdapter);
+                progressBar.setVisibility(View.INVISIBLE);
+                recyclerView.setVisibility(View.VISIBLE);
+            }
 
 
 
 
-        }
+
+
+
+
+
+            }
     }
 
 }

@@ -30,56 +30,6 @@ import bolts.Task;
 
 public class MetawearUtils {
 
-//    public void fingerSensor(final SensorFusionBosch sensorFusion){
-//
-//        sensorFusion.eulerAngles().addRouteAsync(new RouteBuilder() {
-//            @Override
-//            public void configure(RouteComponent source) {
-//                source.stream(new Subscriber() {
-//                    @Override
-//                    public void apply(Data data, Object... env) {
-//                        //zTextView.setText(Float.toString(data.value(EulerAngles.class).heading()));
-//                        Log.i("MainActivity", "heading = " + data.value(EulerAngles.class));
-//                        if(data.value(EulerAngles.class).pitch() > 60.000){
-//                            runOnUiThread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    sensorFusion.stop();
-//                                    xTextView.setText("Pitch down");
-//
-//
-//                                }
-//                            });
-//
-//                        } else if(data.value(EulerAngles.class).pitch() < -60.000) {
-//                            runOnUiThread(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    sensorFusion.stop();
-//                                    xTextView.setText("Pitch up");
-//
-//
-//
-//
-//                                }
-//                            });
-//
-//
-//                        }
-//                    }
-//                });
-//            }
-//        }).continueWith(new Continuation<Route, Void>() {
-//            @Override
-//            public Void then(Task<Route> task) throws Exception {
-//
-//                sensorFusion.eulerAngles().start();
-//                sensorFusion.start();
-//                return null;
-//            }
-//        });
-//
-//    }
 
 
 }

@@ -59,14 +59,6 @@
                 android:layout_margin="8dp"
                 android:text="this is z"/>
 
-            <android.support.design.button.MaterialButton
-            android:id="@+id/testing_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:onClick="onClickTestBoard"
-            android:layout_gravity="center"
-            android:text="Test"
-            />
 
             <android.support.design.button.MaterialButton
                 android:id="@+id/stopping_button"
@@ -76,12 +68,7 @@
                 android:layout_gravity="center"
                 android:onClick="onClickStop"/>
 
-            <android.support.design.button.MaterialButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Sync sensor"
-                android:layout_gravity="center"
-                android:onClick="onClickSyncSensor"/>
+
 
         </LinearLayout>
 

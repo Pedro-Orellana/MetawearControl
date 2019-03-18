@@ -20,7 +20,30 @@ import com.mbientlab.metawear.data.EulerAngles;
 import com.mbientlab.metawear.module.Led;
 import com.mbientlab.metawear.module.SensorFusionBosch;
 import com.mbientlab.metawear.module.Switch;
+import com.philips.lighting.hue.sdk.wrapper.HueLog;
+import com.philips.lighting.hue.sdk.wrapper.Persistence;
+import com.philips.lighting.hue.sdk.wrapper.connection.BridgeConnection;
+import com.philips.lighting.hue.sdk.wrapper.connection.BridgeConnectionCallback;
+import com.philips.lighting.hue.sdk.wrapper.connection.BridgeConnectionType;
+import com.philips.lighting.hue.sdk.wrapper.connection.BridgeResponseCallback;
+import com.philips.lighting.hue.sdk.wrapper.connection.BridgeStateUpdatedCallback;
+import com.philips.lighting.hue.sdk.wrapper.connection.BridgeStateUpdatedEvent;
+import com.philips.lighting.hue.sdk.wrapper.connection.ConnectionEvent;
+import com.philips.lighting.hue.sdk.wrapper.discovery.BridgeDiscovery;
+import com.philips.lighting.hue.sdk.wrapper.discovery.BridgeDiscoveryImpl;
+import com.philips.lighting.hue.sdk.wrapper.discovery.BridgeDiscoveryResult;
+import com.philips.lighting.hue.sdk.wrapper.domain.Bridge;
+import com.philips.lighting.hue.sdk.wrapper.domain.BridgeBuilder;
+import com.philips.lighting.hue.sdk.wrapper.domain.HueError;
+import com.philips.lighting.hue.sdk.wrapper.domain.ReturnCode;
+import com.philips.lighting.hue.sdk.wrapper.domain.clip.ClipResponse;
+import com.philips.lighting.hue.sdk.wrapper.domain.device.light.LightPoint;
+import com.philips.lighting.hue.sdk.wrapper.domain.device.light.LightState;
+import com.philips.lighting.hue.sdk.wrapper.domain.device.light.LightStateImpl;
+import com.philips.lighting.hue.sdk.wrapper.utilities.InitSdk;
 
+
+import java.util.List;
 
 import bolts.Task;
 
@@ -36,6 +59,7 @@ public class ConnectedActivity extends AppCompatActivity {
     private SensorFusionBosch sensorFusion;
     private Switch pushButton;
 
+
     private String buttonPressed;
     private Handler handler;
     private Boolean alreadyWorked;
@@ -46,8 +70,21 @@ public class ConnectedActivity extends AppCompatActivity {
     private int numberOfClicks;
 
     private Boolean firstStepDonePitch;
-    private Boolean firstStepDoneRoll;
     private Boolean secondStepDonePitch;
+
+
+//Set up objects required for lighting system integration
+    private Bridge bridge;
+    private BridgeDiscovery bridgeDiscovery;
+    private List<BridgeDiscoveryResult> bridgeDiscoveryResults;
+    private BridgeDiscoveryResult myBridge;
+
+
+    static {
+        // Load the huesdk native library before calling any SDK method
+        System.loadLibrary("huesdk");
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +96,7 @@ public class ConnectedActivity extends AppCompatActivity {
         xTextView = findViewById(R.id.orientation_x);
         yTextView = findViewById(R.id.orientation_y);
         zTextView = findViewById(R.id.orientation_z);
+
         Intent intent = getIntent();
         BluetoothDevice device = (BluetoothDevice) intent.getExtras().get("BluetoothDevice");
         ConnectingAsyncTask myTask = new ConnectingAsyncTask();
@@ -70,8 +108,227 @@ public class ConnectedActivity extends AppCompatActivity {
         testingRunning = false;
         secondStepDonePitch = false;
 
+        //Setting up the lighting system
+        InitSdk.setApplicationContext(getApplicationContext());
+
+        // Configure the storage location and log level for the Hue SDK
+        Persistence.setStorageLocation(getFilesDir().getAbsolutePath(), "MetawearControl2");
+        HueLog.setConsoleLogLevel(HueLog.LogLevel.INFO);
 
 
+
+
+    }
+
+    public void startBridgeConnection() {
+        disconnectFromBridge();
+        bridgeDiscovery = new BridgeDiscoveryImpl();
+        bridgeDiscovery.search(BridgeDiscovery.Option.ALL, bridgeDiscoveryCallback);
+
+
+    }
+
+    private void disconnectFromBridge() {
+        if (bridge != null) {
+            bridge.disconnect();
+            bridge = null;
+        }
+    }
+
+    private BridgeDiscovery.Callback bridgeDiscoveryCallback = new BridgeDiscovery.Callback() {
+        @Override
+        public void onFinished(final List<BridgeDiscoveryResult> results, final BridgeDiscovery.ReturnCode returnCode) {
+            // Set to null to prevent stopBridgeDiscovery from stopping it
+            bridgeDiscovery = null;
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (returnCode == BridgeDiscovery.ReturnCode.SUCCESS) {
+                        //bridgeDiscoveryListView.setAdapter(new BridgeDiscoveryResultAdapter(getApplicationContext(), results));
+                        bridgeDiscoveryResults = results;
+                        myBridge = bridgeDiscoveryResults.get(0);
+                        yTextView.setText(myBridge.getIp());
+
+
+                        //updateUI(UIState.BridgeDiscoveryResults, "Found " + results.size() + " bridge(s) in the network.");
+                    } else if (returnCode == BridgeDiscovery.ReturnCode.STOPPED) {
+                        //Log.i(TAG, "Bridge discovery stopped.");
+                        yTextView.setText("The discovery was stopped");
+
+                    } else {
+                        //updateUI(UIState.Idle, "Error doing bridge discovery: " + returnCode);
+                        yTextView.setText("There was an error finding the bridge");
+                    }
+                }
+            });
+        }
+    };
+
+    public void makeConnectionToBridge(View view){
+        bridge = new BridgeBuilder("app name", "device name")
+                .setIpAddress(myBridge.getIp())
+                .setConnectionType(BridgeConnectionType.LOCAL)
+                .setBridgeConnectionCallback(bridgeConnectionCallback)
+                .addBridgeStateUpdatedCallback(bridgeStateUpdatedCallback)
+                .build();
+
+        bridge.connect();
+    }
+
+    private BridgeConnectionCallback bridgeConnectionCallback = new BridgeConnectionCallback() {
+        @Override
+        public void onConnectionEvent(BridgeConnection bridgeConnection, ConnectionEvent connectionEvent) {
+            //Log.i(TAG, "Connection event: " + connectionEvent);
+
+            switch (connectionEvent) {
+                case LINK_BUTTON_NOT_PRESSED:
+                    //updateUI(UIState.Pushlinking, "Press the link button to authenticate.");
+                    break;
+
+                case COULD_NOT_CONNECT:
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            yTextView.setText("Could not connect");
+                        }
+                    });
+
+                    // updateUI(UIState.Connecting, "Could not connect.");
+                    break;
+
+                case CONNECTION_LOST:
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            yTextView.setText("Connection lost. Attempting to reconnect");
+                        }
+                    });
+                    //updateUI(UIState.Connecting, "Connection lost. Attempting to reconnect.");
+                    break;
+
+                case CONNECTION_RESTORED:
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            yTextView.setText("Connection restored.");
+                        }
+                    });
+                    //updateUI(UIState.Connected, "Connection restored.");
+                    break;
+
+                case DISCONNECTED:
+                    // User-initiated disconnection.
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        @Override
+        public void onConnectionError(BridgeConnection bridgeConnection, List<HueError> list) {
+            for (HueError error : list) {
+                // Log.e(TAG, "Connection error: " + error.toString());
+            }
+        }
+    };
+
+
+    private BridgeStateUpdatedCallback bridgeStateUpdatedCallback = new BridgeStateUpdatedCallback() {
+        @Override
+        public void onBridgeStateUpdated(Bridge bridge, BridgeStateUpdatedEvent bridgeStateUpdatedEvent) {
+            //Log.i(TAG, "Bridge state updated event: " + bridgeStateUpdatedEvent);
+
+            switch (bridgeStateUpdatedEvent) {
+                case INITIALIZED:
+                    // The bridge state was fully initialized for the first time.
+                    // It is now safe to perform operations on the bridge state.
+                    //updateUI(UIState.Connected, "Connected!");
+                    //setupEntertainmentGroup();
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            zTextView.setText("It is now safe to perform operations on the bridge state.");
+
+                        }
+                    });
+
+
+                    break;
+
+                case LIGHTS_AND_GROUPS:
+                    // At least one light was updated.
+                    break;
+
+                default:
+                    break;
+            }
+        }
+    };
+
+
+
+    public void onClickTurnOn(){
+        List<LightPoint> lights = bridge.getBridgeState().getLights();
+        for (final LightPoint light : lights) {
+            final LightState lightState = new LightStateImpl();
+
+            lightState.setOn(true);
+            lightState.setBrightness(100);
+
+            light.updateState(lightState, BridgeConnectionType.LOCAL, new BridgeResponseCallback() {
+                @Override
+                public void handleCallback(Bridge bridge, ReturnCode returnCode, List<ClipResponse> list, List<HueError> errorList) {
+                    if (returnCode == ReturnCode.SUCCESS) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                xTextView.setText("The lights should have turn off");
+                            }
+                        });
+                        // Log.i(TAG, "Changed hue of light " + light.getIdentifier() + " to " + lightState.getHue());
+                    } else {
+                        // Log.e(TAG, "Error changing hue of light " + light.getIdentifier());
+                        xTextView.setText("There was an error :(");
+                        for (HueError error : errorList) {
+                            //Log.e(TAG, error.toString());
+                        }
+                    }
+                }
+            });
+        }
+
+    }
+
+    public void onClickTurnOff(){
+        List<LightPoint> lights = bridge.getBridgeState().getLights();
+        for (final LightPoint light : lights) {
+            final LightState lightState = new LightStateImpl();
+
+            lightState.setOn(false);
+
+            light.updateState(lightState, BridgeConnectionType.LOCAL, new BridgeResponseCallback() {
+                @Override
+                public void handleCallback(Bridge bridge, ReturnCode returnCode, List<ClipResponse> list, List<HueError> errorList) {
+                    if (returnCode == ReturnCode.SUCCESS) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                xTextView.setText("The lights should have turn off");
+                            }
+                        });
+                        // Log.i(TAG, "Changed hue of light " + light.getIdentifier() + " to " + lightState.getHue());
+                    } else {
+                        // Log.e(TAG, "Error changing hue of light " + light.getIdentifier());
+                        xTextView.setText("There was an error :(");
+                        for (HueError error : errorList) {
+                            //Log.e(TAG, error.toString());
+                        }
+                    }
+                }
+            });
+        }
 
     }
 
@@ -117,6 +374,7 @@ public class ConnectedActivity extends AppCompatActivity {
                         pushButton = myBoard.getModule(Switch.class);
                         alreadyWorked = true;
                         setMySensors();
+                        startBridgeConnection();
                     }
                 },5000);
 
@@ -136,7 +394,6 @@ public class ConnectedActivity extends AppCompatActivity {
 
             firstStepDonePitch = false;
             secondStepDonePitch = false;
-            firstStepDoneRoll = false;
 
             led.editPattern(Led.Color.GREEN, Led.PatternPreset.SOLID).commit();
             sensorFusion.eulerAngles().start();
@@ -268,6 +525,7 @@ public class ConnectedActivity extends AppCompatActivity {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
+                            onClickTurnOn();
                             xTextView.setText("Pitch up");
                             sensorFusion.stop();
                             led.stop(true);
@@ -332,13 +590,15 @@ public class ConnectedActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            xTextView.setText("Pitch down");
+                            onClickTurnOff();
+                            //xTextView.setText("Pitch down");
                             sensorFusion.stop();
                             led.stop(true);
                             alreadyWorked = true;
                             isSingleClickActivated = false;
                             firstStepDonePitch = false;
                             secondStepDonePitch = false;
+
 
                         }
 

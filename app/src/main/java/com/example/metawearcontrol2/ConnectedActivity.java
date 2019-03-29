@@ -13,10 +13,12 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import com.mbientlab.metawear.Data;
 import com.mbientlab.metawear.MetaWearBoard;
+import com.mbientlab.metawear.Route;
 import com.mbientlab.metawear.Subscriber;
 import com.mbientlab.metawear.builder.RouteBuilder;
 import com.mbientlab.metawear.builder.RouteComponent;
 import com.mbientlab.metawear.data.EulerAngles;
+import com.mbientlab.metawear.module.AccelerometerBosch;
 import com.mbientlab.metawear.module.Led;
 import com.mbientlab.metawear.module.SensorFusionBosch;
 import com.mbientlab.metawear.module.Switch;
@@ -45,6 +47,7 @@ import com.philips.lighting.hue.sdk.wrapper.utilities.InitSdk;
 
 import java.util.List;
 
+import bolts.Continuation;
 import bolts.Task;
 
 public class ConnectedActivity extends AppCompatActivity {
@@ -55,6 +58,9 @@ public class ConnectedActivity extends AppCompatActivity {
     private TextView xTextView;
     private TextView yTextView;
     private TextView zTextView;
+
+   // Creating private instances of sensors on board
+    private AccelerometerBosch accBosch;
     private Led led;
     private SensorFusionBosch sensorFusion;
     private Switch pushButton;
@@ -85,6 +91,7 @@ public class ConnectedActivity extends AppCompatActivity {
         System.loadLibrary("huesdk");
     }
 
+    // Life cycle methods
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -112,13 +119,19 @@ public class ConnectedActivity extends AppCompatActivity {
         InitSdk.setApplicationContext(getApplicationContext());
 
         // Configure the storage location and log level for the Hue SDK
-        Persistence.setStorageLocation(getFilesDir().getAbsolutePath(), "MetawearControl2");
+        Persistence.setStorageLocation(getFilesDir().getAbsolutePath(), "MetawearControl");
         HueLog.setConsoleLogLevel(HueLog.LogLevel.INFO);
 
-
-
-
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        myBoard.tearDown();
+        myBoard.disconnectAsync();
+    }
+
+    //  Beginning of Hue light bulbs code section
 
     public void startBridgeConnection() {
         disconnectFromBridge();
@@ -169,6 +182,9 @@ public class ConnectedActivity extends AppCompatActivity {
         bridge = new BridgeBuilder("app name", "device name")
                 .setIpAddress(myBridge.getIp())
                 .setConnectionType(BridgeConnectionType.LOCAL)
+
+                // Working with some deprecated code. Maybe in need of finding newer methods.
+
                 .setBridgeConnectionCallback(bridgeConnectionCallback)
                 .addBridgeStateUpdatedCallback(bridgeStateUpdatedCallback)
                 .build();
@@ -332,12 +348,9 @@ public class ConnectedActivity extends AppCompatActivity {
 
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        myBoard.tearDown();
-        myBoard.disconnectAsync();
-    }
+    // end of section of Hue light bulbs code
+
+
 
     private class ConnectingAsyncTask extends AsyncTask<BluetoothDevice, Void, Task> {
 
@@ -373,7 +386,7 @@ public class ConnectedActivity extends AppCompatActivity {
                         sensorFusion = myBoard.getModule(SensorFusionBosch.class);
                         pushButton = myBoard.getModule(Switch.class);
                         alreadyWorked = true;
-                        setMySensors();
+                         setMySensors();
                         startBridgeConnection();
                     }
                 },5000);
@@ -389,47 +402,111 @@ public class ConnectedActivity extends AppCompatActivity {
         led.stop(true);
         }
 
+
         public void setMySensors(){
+
+            myBoard.tearDown();
+
+            numberOfClicks = 0;
+            isSingleClickActivated = true;
+            isDoubleClickActivated = false;
+            testingRunning = false;
+            alreadyWorked = true;
+            alreadyWorkedRoll = true;
+
+            accBosch = myBoard.getModule(AccelerometerBosch.class);
+            led = myBoard.getModule(Led.class);
+
+
+
+
+
+            accBosch.tap().configure()
+                    .enableDoubleTap()
+                    .enableSingleTap()
+                    .threshold(2f)
+                    .shockTime(AccelerometerBosch.TapShockTime.TST_50_MS)
+                    .commit();
+            accBosch.tap().addRouteAsync(new RouteBuilder() {
+                @Override
+                public void configure(RouteComponent source) {
+                    source.stream(new Subscriber() {
+                        @Override
+                        public void apply(Data data, Object... env) {
+                            AccelerometerBosch.Tap tap = data.value(AccelerometerBosch.Tap.class);
+                            switch(tap.type) {
+                                case SINGLE:
+                                    Log.i("MainActivity", "Single tap");
+                                    led.stop(false);
+                                    break;
+                                case DOUBLE:
+                                    setMySensors2();
+                                    break;
+                            }
+                        }
+                    });
+                }
+            }).continueWith(new Continuation<Route, Void>() {
+                @Override
+                public Void then(Task<Route> task) throws Exception {
+                    accBosch.tap().start();
+                    accBosch.start();
+                    return null;
+                }
+            });
+
+        }
+
+
+
+                public void setMySensors2(){
         //This is where most of the logic of the app is written.
+
+                    myBoard.tearDown();
 
             firstStepDonePitch = false;
             secondStepDonePitch = false;
 
+                    led = myBoard.getModule(Led.class);
+
             led.editPattern(Led.Color.GREEN, Led.PatternPreset.SOLID).commit();
-            sensorFusion.eulerAngles().start();
+            led.play();
+            //sensorFusion.eulerAngles().start();
 
 
-            pushButton.state().addRouteAsync(new RouteBuilder() {
-                @Override
-                public void configure(RouteComponent source) {
-                    source.stream(new Subscriber() {
-                        @Override public void apply(Data data, Object... env) {
-                            Log.i("MainActivity",data.types().toString());
-                            runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    buttonPressed = data.toString().substring(47,48);
-                                    if(buttonPressed.equals("1")){
-                                        if(!testingRunning) {
-                                            testingRunning = true;
-                                            handler.postDelayed(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    readNumberOfClicks();
-                                                }
-                                            },300);
+            // push button sensor, will come back to it later
 
-                                        }
-                                        numberOfClicks = numberOfClicks +1;
-                                    }
-
-                                }
-                            });
-
-                        }
-                    });
-                }
-            });
+//            pushButton.state().addRouteAsync(new RouteBuilder() {
+//                @Override
+//                public void configure(RouteComponent source) {
+//                    source.stream(new Subscriber() {
+//                        @Override public void apply(Data data, Object... env) {
+//                            Log.i("MainActivity",data.types().toString());
+//                            runOnUiThread(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    buttonPressed = data.toString().substring(47,48);
+//                                    if(buttonPressed.equals("1")){
+//                                        if(!testingRunning) {
+//                                            testingRunning = true;
+//                                            handler.postDelayed(new Runnable() {
+//                                                @Override
+//                                                public void run() {
+//                                                    readNumberOfClicks();
+//                                                }
+//                                            },300);
+//
+//                                        }
+//                                        numberOfClicks = numberOfClicks +1;
+//                                    }
+//
+//                                }
+//                            });
+//
+//                        }
+//                    });
+//                }
+//            });
 
             sensorFusion.configure()
                     .mode(SensorFusionBosch.Mode.NDOF)
@@ -445,17 +522,29 @@ public class ConnectedActivity extends AppCompatActivity {
                 source.stream(new Subscriber() {
                     @Override
                     public void apply(Data data, Object... env) {
-                        if(isSingleClickActivated){
+                        //if(isSingleClickActivated){
                             doSingleClick(data);
-                        } else if (isDoubleClickActivated){
-                        }
+                       // } else if (isDoubleClickActivated){
+                        //}
 
                     }
                 });
             }
-        });
+        }).continueWith(new Continuation<Route, Void>() {
+                        @Override
+                        public Void then(Task<Route> task) throws Exception {
+                            sensorFusion.eulerAngles().start();
+                            sensorFusion.start();
+                            return null;
+                        }
+                    });
 
         }
+
+
+
+
+
 
         private void readNumberOfClicks(){
         switch (numberOfClicks){
@@ -531,6 +620,7 @@ public class ConnectedActivity extends AppCompatActivity {
                             led.stop(true);
                             alreadyWorked = true;
                             isSingleClickActivated = false;
+                            setMySensors();
 
 
                         }
@@ -548,6 +638,7 @@ public class ConnectedActivity extends AppCompatActivity {
                         led.stop(true);
                         alreadyWorkedRoll = true;
                         isSingleClickActivated = false;
+                        setMySensors();
                     }
                 });
             }else if (data.value(EulerAngles.class).roll() > 60.000 && !alreadyWorkedRoll){
@@ -559,6 +650,7 @@ public class ConnectedActivity extends AppCompatActivity {
                         led.stop(true);
                         alreadyWorkedRoll = true;
                         isSingleClickActivated = false;
+                        setMySensors();
                     }
                 });
             }else if (data.value(EulerAngles.class).roll()< 60.000 && data.value(EulerAngles.class).roll()> -60.000){
@@ -576,12 +668,14 @@ public class ConnectedActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         xTextView.setText("Pitch down then up");
-                        firstStepDonePitch = false;
-                        secondStepDonePitch = false;
                         led.stop(true);
                         sensorFusion.stop();
+                        firstStepDonePitch = false;
+                        secondStepDonePitch = false;
                         isSingleClickActivated = false;
                         alreadyWorked = true;
+                        setMySensors();
+
                     }
                 });
 
@@ -592,12 +686,14 @@ public class ConnectedActivity extends AppCompatActivity {
                         public void run() {
                             onClickTurnOff();
                             //xTextView.setText("Pitch down");
+
                             sensorFusion.stop();
                             led.stop(true);
                             alreadyWorked = true;
                             isSingleClickActivated = false;
                             firstStepDonePitch = false;
                             secondStepDonePitch = false;
+                            setMySensors();
 
 
                         }

@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
+<animation-list xmlns:android="http://schemas.android.com/apk/res/android"
+    android:oneshot="false">
+    <item android:drawable="@drawable/good3" android:duration="1000"/>
+    <item android:drawable="@drawable/good2" android:duration="1000"/>
+    <item android:drawable="@drawable/good1" android:duration="1000"/>
 
-</selector>
+
+</animation-list>

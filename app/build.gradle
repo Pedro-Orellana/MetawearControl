@@ -33,5 +33,7 @@ dependencies {
     implementation 'com.mbientlab:metawear:3.7.0'
     implementation 'com.android.support:recyclerview-v7:28.0.0'
     implementation project(':huesdk')
+    implementation 'android.arch.lifecycle:livedata:1.1.1'
+    implementation 'android.arch.lifecycle:viewmodel:1.1.1'
 
 }

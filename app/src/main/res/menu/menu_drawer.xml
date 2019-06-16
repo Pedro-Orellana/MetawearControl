@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-
+     <item
+         android:id="@+id/drawer_settings"
+         android:title="Settings"
+         android:icon="@drawable/outline_build_black_18dp"
+         />
+    <item
+        android:id="@+id/drawer_about"
+        android:title="About"
+        android:icon="@android:drawable/sym_action_email"/>
 </menu>

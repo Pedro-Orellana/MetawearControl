@@ -6,4 +6,9 @@
     <string name="scanning">Scanning for available devices around...</string>
 
     <string name="connecting">Connecting...</string>
+
+    <string name="getting_started">Lets get started! click on the search button to look for your ring</string>
+
+    <string name="open_drawer">Open Drawer</string>
+    <string name="close_drawer">Close Drawer</string>
 </resources>

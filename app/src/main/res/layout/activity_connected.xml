@@ -1,86 +1,110 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+
+<android.support.v4.widget.DrawerLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ConnectedActivity"
-    android:orientation="vertical">
-
-    <android.support.design.widget.AppBarLayout
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/drawer_layout">
+    <LinearLayout
+        xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-        <include
-            layout="@layout/toolbar_main"
-            android:id="@+id/connected_toolbar"/>
+        android:layout_height="match_parent"
+        tools:context=".ConnectedActivity"
+        android:orientation="vertical">
 
-    </android.support.design.widget.AppBarLayout>
-    <TextView
-        android:id="@+id/connecting_text_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/connecting"
-        android:layout_gravity="center"
-        android:layout_marginTop="24dp"/>
+        <android.support.design.widget.AppBarLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <include
+                layout="@layout/toolbar_main"
+                android:id="@+id/connected_toolbar"/>
 
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-        <ProgressBar
-            android:id="@+id/connecting_progress_bar"
+        </android.support.design.widget.AppBarLayout>
+        <TextView
+            android:id="@+id/connecting_text_view"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:text="@string/connecting"
             android:layout_gravity="center"
-            android:visibility="visible"/>
-        <LinearLayout
-            android:id="@+id/connected_linear_layout"
+            android:layout_marginTop="24dp"/>
+
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:visibility="invisible"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/orientation_x"
+            android:layout_height="match_parent">
+            <ProgressBar
+                android:id="@+id/connecting_progress_bar"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                android:text="This is x"/>
-            <TextView
-                android:id="@+id/orientation_y"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                android:text="this is y"/>
-            <TextView
-                android:id="@+id/orientation_z"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_margin="8dp"
-                android:text="this is z"/>
-
-
-            <android.support.design.button.MaterialButton
-                android:id="@+id/stopping_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Stop"
                 android:layout_gravity="center"
-                android:onClick="onClickStop"/>
+                android:visibility="visible"/>
+            <LinearLayout
+                android:id="@+id/connected_linear_layout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="invisible"
+                android:orientation="vertical">
 
-            <android.support.design.button.MaterialButton
-                android:id="@+id/connection_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Make Connection to Bridge"
-                android:layout_gravity="center"
-                android:onClick="makeConnectionToBridge"/>
+                <TextView
+                    android:id="@+id/orientation_x"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="8dp"
+                    android:text="This is x"/>
+                <TextView
+                    android:id="@+id/orientation_y"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="8dp"
+                    android:text="this is y"/>
+                <TextView
+                    android:id="@+id/orientation_z"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="8dp"
+                    android:text="this is z"/>
+
+
+                <android.support.design.button.MaterialButton
+                    android:id="@+id/stopping_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Stop"
+                    android:layout_gravity="center"
+                    android:onClick="onClickStop"/>
+
+                <android.support.design.button.MaterialButton
+                    android:id="@+id/connection_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Make Connection to Bridge"
+                    android:layout_gravity="center"
+                    android:onClick="makeConnectionToBridge"/>
 
 
 
-        </LinearLayout>
+            </LinearLayout>
 
 
-    </FrameLayout>
+        </FrameLayout>
 
-</LinearLayout>
+    </LinearLayout>
+
+    <android.support.design.widget.NavigationView
+        android:id="@+id/navigation_view"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        app:headerLayout="@layout/drawer_header"
+        app:menu="@menu/menu_drawer">
+
+
+    </android.support.design.widget.NavigationView>
+
+
+</android.support.v4.widget.DrawerLayout>
+
+<!--TODO(2) Create a layout (maybe a CardView)
+      with the current settings-->
+
+
